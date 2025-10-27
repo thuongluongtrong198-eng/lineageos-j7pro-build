@@ -1,0 +1,55 @@
+name: Build LineageOS 21 (Android 14) for SM-J730G with GApps
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Prepare environment
+      run: |
+        sudo apt update
+        sudo apt install -y openjdk-17-jdk git-core gnupg flex bison build-essential zip curl zlib1g-dev \
+          gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev \
+          lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig
+
+    - name: Initialize LineageOS repo
+      run: |
+        mkdir -p ~/android/lineage
+        cd ~/android/lineage
+        repo init -u https://github.com/LineageOS/android.git -b lineage-21.0
+
+    - name: Sync sources
+      run: |
+        cd ~/android/lineage
+        repo sync -c -j$(nproc) --force-sync --no-clone-bundle --no-tags
+
+    - name: Clone device sources
+      run: |
+        cd ~/android/lineage
+        git clone https://github.com/LineageOS/android_device_samsung_j7y17lte.git device/samsung/j7y17lte
+        git clone https://github.com/LineageOS/android_vendor_samsung_j7y17lte.git vendor/samsung/j7y17lte
+        git clone https://github.com/LineageOS/android_kernel_samsung_exynos7870.git kernel/samsung/exynos7870
+
+    - name: Set up environment
+      run: |
+        cd ~/android/lineage
+        source build/envsetup.sh
+        lunch lineage_j7y17lte-userdebug
+
+    - name: Add GApps
+      run: |
+        cd ~/android/lineage/vendor
+        git clone https://gitlab.opengapps.org/opengapps/arm64.git opengapps -b master
+
+    - name: Build ROM
+      run: |
+        cd ~/android/lineage
+        mka bacon -j$(nproc)
+
+    - name: Upload build output
+      uses: actions/upload-artifact@v3
+      with:
+        name: LineageOS21-J730G-GApps
+        path: ~/android/lineage/out/target/product/j7y17lte/*.zip
