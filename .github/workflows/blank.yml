@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+
     steps:
     - name: Prepare environment
       run: |
@@ -41,15 +42,17 @@ jobs:
     - name: Add GApps
       run: |
         cd ~/android/lineage/vendor
-        git clone https://gitlab.opengapps.org/opengapps/arm64.git opengapps -b master
+        git clone https://gitlab.opengapps.org/opengapps/arm64.git opengapps -b master || true
 
     - name: Build ROM
       run: |
         cd ~/android/lineage
+        source build/envsetup.sh
+        lunch lineage_j7y17lte-userdebug
         mka bacon -j$(nproc)
 
     - name: Upload build output
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: LineageOS21-J730G-GApps
         path: ~/android/lineage/out/target/product/j7y17lte/*.zip
